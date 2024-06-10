@@ -1,7 +1,3 @@
-/**
- *Submitted for verification at polygonscan.com on 2022-02-14
-*/
-
 pragma solidity >=0.5.10;
 
 contract MaticHeaven {
