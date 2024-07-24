@@ -2,19 +2,12 @@ import React, { useEffect, useState } from 'react';
 import './App.css';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { connectToWallet, web3_contact_balance, web3_total_deposit, web3_user_total_deposit, web3_user_total_withdraw, web3_user_referral_bonus, web3_referred_users, web3_available_balance, stakeMATIC, WithdrawFn, reinvest } from './utils/web3API';
+import { connectToWallet, stakeMATIC, WithdrawFn, reinvest } from './utils/web3API';
 import Spinner from 'react-bootstrap/Spinner';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 function App() {
   const [walletAddress, setWalletAddress] = useState('');
-  const [contact_balance, setContact_balance] = useState('');
-  const [total_deposit, setTotal_deposit] = useState('');
-  const [user_total_deposit, setUser_total_deposit] = useState('');
-  const [user_total_withdraw, setUser_total_withdraw] = useState('');
-  const [user_referral_bonus, setUser_referral_bonus] = useState('');
-  const [referred_users, setReferred_users] = useState('');
-  const [available_balance, setAvailable_balance] = useState('');
   const [amount, setAmount] = useState('');
   const [referral_address, setReferralAddress] = useState('');
   const [loading, setLoading] = useState(false);
@@ -26,7 +19,7 @@ function App() {
       setWalletAddress(walletAddress);
     }
     fetchData();
-  }, [walletAddress]);
+  }, []);
 
   const handleStake = async () => {
     setLoading(true);
